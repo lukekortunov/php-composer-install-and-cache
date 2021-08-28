@@ -1,0 +1,33 @@
+name: install-and-cache-composer-dependencies
+
+author: Luke Kortunov
+
+description: 'Allows to install PHP packages via composer and create cache based on composer.lock file to optimize deployment time'
+
+branding:
+  icon: fast-forward
+  color: yellow
+
+runs:
+  using: "composite"
+  steps:
+    # Get composer cache directory
+    -   id:     get-composer-cache-directory
+        name:   Get Composer caches directory path
+        run:    echo "::set-output name=dir::$(composer config cache-files-dir)"
+        shell:  bash
+
+    # Mount cache directory
+    -   id:     mount-cache-directory
+        name:   Mount cache directory
+        uses:   actions/cache@v2
+        with:
+          path:           ${{ steps.get-composer-cache-directory.outputs.dir }}
+          key:            ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys:   ${{ runner.os }}-composer-
+
+    # Install composer deps, if .lock file was changed
+    -   id:     install-composer-dependencies
+        name:   Install composer dependencies
+        run:    composer install --prefer-dist --no-progress --no-suggest
+        shell:  bash
